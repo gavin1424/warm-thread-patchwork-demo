@@ -4,6 +4,8 @@
 
 > 本網站為商用網站設計示範案例，品牌及部分內容為情境展示用途。
 
+公開展示：<https://gavin1424.github.io/warm-thread-patchwork-demo/>
+
 ## 技術
 
 - 原生 HTML、CSS、JavaScript
