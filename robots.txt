@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gavin1424.github.io/warm-thread-patchwork-demo/sitemap.xml
