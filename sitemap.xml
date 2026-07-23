@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://gavin1424.github.io/warm-thread-patchwork-demo/</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>1.0</priority>
-  </url>
+  <!-- 暖線首頁與舊服務頁皆為 noindex 示範內容，因此不列入公開索引 sitemap。 -->
 </urlset>
