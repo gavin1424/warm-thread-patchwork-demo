@@ -2,15 +2,14 @@
   "use strict";
 
   const config = window.SITE_CONFIG;
-  if (!config) {
-    return;
-  }
+  if (!config) return;
 
   const root = document.documentElement;
   const body = document.body;
   const menuButton = document.querySelector("[data-menu-toggle]");
   const menu = document.querySelector("[data-site-menu]");
   const demoDialog = document.querySelector("#demo-dialog");
+  const serviceDialog = document.querySelector("#service-dialog");
   const privacyDialog = document.querySelector("#privacy-dialog");
 
   function setTheme() {
@@ -29,6 +28,69 @@
         root.style.setProperty(variable, config.theme[key]);
       }
     });
+  }
+
+  function absoluteUrl(path) {
+    try {
+      return new URL(path || "", config.seo.baseUrl).href;
+    } catch (error) {
+      return path || "";
+    }
+  }
+
+  function setMeta(attribute, key, content) {
+    let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
+    if (!element) {
+      element = document.createElement("meta");
+      element.setAttribute(attribute, key);
+      document.head.append(element);
+    }
+    element.setAttribute("content", content);
+  }
+
+  function initializeSeo() {
+    const pageKey = body.dataset.page || "home";
+    const page = config.seo && config.seo.pages && config.seo.pages[pageKey];
+    if (!page) return;
+
+    const pageUrl = absoluteUrl(page.path);
+    const imageUrl = absoluteUrl(page.ogImage);
+    const siteName = pageKey === "service" ? config.service.name : config.brand.name;
+
+    document.title = page.title;
+    setMeta("name", "description", page.description);
+    setMeta("name", "robots", page.robots);
+    setMeta("property", "og:type", page.type || "website");
+    setMeta("property", "og:locale", "zh_TW");
+    setMeta("property", "og:site_name", siteName);
+    setMeta("property", "og:title", page.title);
+    setMeta("property", "og:description", page.description);
+    setMeta("property", "og:url", pageUrl);
+    setMeta("property", "og:image", imageUrl);
+    setMeta("property", "og:image:alt", page.ogImageAlt || page.title);
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", page.title);
+    setMeta("name", "twitter:description", page.description);
+    setMeta("name", "twitter:image", imageUrl);
+    setMeta("name", "twitter:image:alt", page.ogImageAlt || page.title);
+
+    let canonical = document.head.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.append(canonical);
+    }
+    canonical.href = pageUrl;
+
+    let structuredData = document.head.querySelector("script[data-structured-data]");
+    if (!structuredData) {
+      structuredData = document.createElement("script");
+      structuredData.type = "application/ld+json";
+      structuredData.dataset.structuredData = "";
+      document.head.append(structuredData);
+    }
+    const schema = Object.assign({}, page.schema, { url: pageUrl });
+    structuredData.textContent = JSON.stringify(schema);
   }
 
   function getConfigValue(path) {
@@ -50,7 +112,14 @@
 
     const top = document.createElement("div");
     top.className = "course-top";
-    top.innerHTML = `<span class="course-number" aria-hidden="true">${course.order}</span><span class="course-note">${course.note}</span>`;
+    const number = document.createElement("span");
+    number.className = "course-number";
+    number.setAttribute("aria-hidden", "true");
+    number.textContent = course.order;
+    const note = document.createElement("span");
+    note.className = "course-note";
+    note.textContent = course.note;
+    top.append(number, note);
 
     const title = document.createElement("h3");
     title.textContent = course.name;
@@ -77,11 +146,28 @@
     const button = document.createElement("button");
     button.className = "card-link";
     button.type = "button";
-    button.dataset.contactAction = "booking";
-    button.innerHTML = `詢問這堂課 <span aria-hidden="true">→</span>`;
+    button.dataset.brandContact = "booking";
+    button.append("詢問這堂課 ");
+    const arrow = document.createElement("span");
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "→";
+    button.append(arrow);
 
     article.append(top, title, summary, list, button);
     return article;
+  }
+
+  function createFallbackArt(work) {
+    const art = document.createElement("div");
+    art.className = `fabric-art ${work.visualClass}`;
+    art.setAttribute("role", "img");
+    art.setAttribute("aria-label", work.alt);
+    ["piece-one", "piece-two", "piece-three"].forEach((pieceClass) => {
+      const piece = document.createElement("span");
+      piece.className = `fabric-piece ${pieceClass}`;
+      art.append(piece);
+    });
+    return art;
   }
 
   function createWorkVisual(work) {
@@ -92,13 +178,15 @@
       const image = document.createElement("img");
       image.src = work.image;
       image.alt = work.alt;
-      image.width = 720;
-      image.height = 540;
+      image.width = 1200;
+      image.height = 900;
       image.loading = "lazy";
       image.decoding = "async";
-      image.addEventListener("error", () => {
-        wrapper.replaceChildren(createFallbackArt(work));
-      }, { once: true });
+      image.addEventListener(
+        "error",
+        () => wrapper.replaceChildren(createFallbackArt(work)),
+        { once: true }
+      );
       wrapper.append(image);
       return wrapper;
     }
@@ -107,19 +195,9 @@
     return wrapper;
   }
 
-  function createFallbackArt(work) {
-    const art = document.createElement("div");
-    art.className = `fabric-art ${work.visualClass}`;
-    art.setAttribute("role", "img");
-    art.setAttribute("aria-label", work.alt);
-    art.innerHTML = '<span class="fabric-piece piece-one"></span><span class="fabric-piece piece-two"></span><span class="fabric-piece piece-three"></span>';
-    return art;
-  }
-
   function createWorkCard(work) {
     const article = document.createElement("article");
     article.className = "work-card";
-    const visual = createWorkVisual(work);
     const caption = document.createElement("div");
     caption.className = "work-caption";
     const category = document.createElement("span");
@@ -129,8 +207,30 @@
     const description = document.createElement("p");
     description.textContent = work.description;
     caption.append(category, title, description);
-    article.append(visual, caption);
+    article.append(createWorkVisual(work), caption);
     return article;
+  }
+
+  function createFaqItem(faq, index) {
+    const item = document.createElement("details");
+    item.className = "faq-item";
+    if (index === 0) item.open = true;
+
+    const summary = document.createElement("summary");
+    const question = document.createElement("span");
+    question.textContent = faq.question;
+    const toggle = document.createElement("span");
+    toggle.className = "faq-toggle";
+    toggle.setAttribute("aria-hidden", "true");
+    summary.append(question, toggle);
+
+    const answer = document.createElement("div");
+    answer.className = "faq-answer";
+    const paragraph = document.createElement("p");
+    paragraph.textContent = faq.answer;
+    answer.append(paragraph);
+    item.append(summary, answer);
+    return item;
   }
 
   function renderContent() {
@@ -138,31 +238,9 @@
     const workList = document.querySelector("[data-work-list]");
     const faqList = document.querySelector("[data-faq-list]");
 
-    if (courseList) {
-      courseList.replaceChildren(...config.courses.map(createCourseCard));
-    }
-
-    if (workList) {
-      workList.replaceChildren(...config.works.map(createWorkCard));
-    }
-
-    if (faqList) {
-      const faqs = config.faqs.map((faq, index) => {
-        const item = document.createElement("details");
-        item.className = "faq-item";
-        if (index === 0) item.open = true;
-        const summary = document.createElement("summary");
-        summary.innerHTML = `<span>${faq.question}</span><span class="faq-toggle" aria-hidden="true"></span>`;
-        const answer = document.createElement("div");
-        answer.className = "faq-answer";
-        const paragraph = document.createElement("p");
-        paragraph.textContent = faq.answer;
-        answer.append(paragraph);
-        item.append(summary, answer);
-        return item;
-      });
-      faqList.replaceChildren(...faqs);
-    }
+    if (courseList) courseList.replaceChildren(...config.courses.map(createCourseCard));
+    if (workList) workList.replaceChildren(...config.works.map(createWorkCard));
+    if (faqList) faqList.replaceChildren(...config.faqs.map(createFaqItem));
   }
 
   function setMenu(open) {
@@ -184,27 +262,27 @@
 
   function closeDialog(dialog) {
     if (!dialog) return;
-    if (typeof dialog.close === "function") {
-      dialog.close();
-    } else {
-      dialog.removeAttribute("open");
-    }
+    if (typeof dialog.close === "function") dialog.close();
+    else dialog.removeAttribute("open");
   }
 
   function showDemoMessage(customMessage) {
     const message = demoDialog && demoDialog.querySelector("[data-demo-message]");
-    if (message) {
-      message.textContent = customMessage || config.demoMessage;
-    }
+    if (message) message.textContent = customMessage || config.demoMessage;
     showDialog(demoDialog);
   }
 
-  function handleContactAction(event) {
-    const trigger = event.currentTarget;
-    const action = trigger.dataset.contactAction;
+  function showServiceMessage() {
+    const message = serviceDialog && serviceDialog.querySelector("[data-service-message]");
+    if (message) message.textContent = config.service.contactMissingMessage;
+    showDialog(serviceDialog);
+  }
+
+  function handleBrandContact(event) {
+    event.preventDefault();
+    const action = event.currentTarget.dataset.brandContact;
 
     if (config.DEMO_MODE) {
-      event.preventDefault();
       showDemoMessage();
       return;
     }
@@ -212,16 +290,25 @@
     const links = {
       line: config.contact.lineUrl,
       booking: config.contact.lineUrl || config.contact.formEndpoint,
-      social: config.contact.instagramUrl,
-      service: config.contact.email ? `mailto:${config.contact.email}` : ""
+      social: config.contact.instagramUrl
     };
     const target = links[action];
+    if (target) window.location.assign(target);
+    else showDemoMessage("品牌聯絡方式尚未設定，請先在 site-config.js 填入正式資料。");
+  }
+
+  function handleServiceContact(event) {
+    event.preventDefault();
+    const target =
+      config.service.contactUrl ||
+      config.service.inquiryFormUrl ||
+      (config.service.email ? `mailto:${config.service.email}` : "");
+
     if (target) {
-      window.location.href = target;
-    } else {
-      event.preventDefault();
-      showDemoMessage("此聯絡方式尚未設定。請先在 site-config.js 補上正式品牌資料。");
+      window.location.assign(target);
+      return;
     }
+    showServiceMessage();
   }
 
   function initializeInteractions() {
@@ -229,36 +316,42 @@
       menuButton.addEventListener("click", () => {
         setMenu(menuButton.getAttribute("aria-expanded") !== "true");
       });
-
       menu.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => setMenu(false));
       });
     }
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && menuButton && menuButton.getAttribute("aria-expanded") === "true") {
+      if (
+        event.key === "Escape" &&
+        menuButton &&
+        menuButton.getAttribute("aria-expanded") === "true"
+      ) {
         setMenu(false);
         menuButton.focus();
       }
     });
 
-    document.querySelectorAll("[data-contact-action]").forEach((trigger) => {
-      trigger.addEventListener("click", handleContactAction);
+    document.querySelectorAll("[data-brand-contact]").forEach((trigger) => {
+      trigger.addEventListener("click", handleBrandContact);
     });
 
-    document.querySelectorAll("[data-dialog-close]").forEach((button) => {
-      button.addEventListener("click", () => closeDialog(demoDialog));
+    document.querySelectorAll("[data-service-contact]").forEach((trigger) => {
+      trigger.addEventListener("click", handleServiceContact);
+    });
+
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const dialog = document.getElementById(button.dataset.closeDialog);
+        closeDialog(dialog);
+      });
     });
 
     document.querySelectorAll("[data-privacy]").forEach((button) => {
       button.addEventListener("click", () => showDialog(privacyDialog));
     });
 
-    document.querySelectorAll("[data-privacy-close]").forEach((button) => {
-      button.addEventListener("click", () => closeDialog(privacyDialog));
-    });
-
-    [demoDialog, privacyDialog].forEach((dialog) => {
+    [demoDialog, serviceDialog, privacyDialog].forEach((dialog) => {
       if (!dialog) return;
       dialog.addEventListener("click", (event) => {
         if (event.target === dialog) closeDialog(dialog);
@@ -270,15 +363,20 @@
       demoForm.addEventListener("submit", (event) => {
         event.preventDefault();
         if (config.DEMO_MODE) {
-          showDemoMessage("這是示範表單。你選擇的內容沒有被儲存或傳送；正式合作後才會串接品牌的 LINE 或安全表單。");
+          showDemoMessage("這是示範預約介面，選取的內容不會被儲存或傳送。品牌正式上線後可串接 LINE 或詢問表單。");
           return;
         }
-        showDemoMessage("正式表單端點尚未設定，沒有任何資料被送出。");
+        if (config.contact.formEndpoint) {
+          window.location.assign(config.contact.formEndpoint);
+          return;
+        }
+        showDemoMessage("品牌預約表單尚未設定，請先在 site-config.js 填入正式資料。");
       });
     }
   }
 
   setTheme();
+  initializeSeo();
   setConfigText();
   renderContent();
   initializeInteractions();
