@@ -53,7 +53,7 @@
     const page = config.seo && config.seo.pages && config.seo.pages[pageKey];
     if (!page) return;
 
-    const pageUrl = absoluteUrl(page.path);
+    const pageUrl = page.canonicalUrl || absoluteUrl(page.path);
     const imageUrl = absoluteUrl(page.ogImage);
     const siteName = pageKey === "service" ? config.service.name : config.brand.name;
 

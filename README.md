@@ -1,9 +1,10 @@
 # 暖線拼布工作室｜v1.1 成交展示版
 
-這是一個「拼布／手作課程工作室」的商用網站設計示範案例，同時包含一頁真正用來說明網站製作服務的銷售頁。暖線拼布工作室為虛構品牌，作品影像與部分內容為情境展示用途。
+這是一個「拼布／手作課程工作室」的商用網站設計示範案例。暖線拼布工作室為虛構品牌，作品影像與部分內容為情境展示用途；正式網站製作服務已移至獨立網站。
 
 - 品牌示範首頁：<https://gavin1424.github.io/warm-thread-patchwork-demo/>
-- 網站製作方案：<https://gavin1424.github.io/warm-thread-patchwork-demo/service.html>
+- 獨立網站製作方案：<https://gavin1424.github.io/>
+- 舊服務頁：`service.html`（保留相容連結，設定 `noindex, follow`，canonical 指向獨立服務網站）
 
 ## 技術與本機瀏覽
 
@@ -52,24 +53,19 @@ python -m http.server 4173
 
 具有 `data-service-contact` 的按鈕只讀取 `service` 內的網站製作聯絡設定，不受品牌 `DEMO_MODE` 攔截。
 
-目前 `service.contactUrl` 為空，因此按鈕會顯示：
-
-> 網站製作聯絡方式尚待設定；若你是收到此示範連結，請直接回覆傳送連結的對話。
-
-這個行為不會連到假網址，也不會收集資料。
+目前 `service.contactUrl` 與 `service.inquiryFormUrl` 均使用已驗證的 Google 方案詢問表。網站製作服務按鈕會前往該表單，不受品牌 `DEMO_MODE` 攔截。Email 與公開社群目前明確標記為「暫不使用」，不顯示空白按鈕。
 
 ## 正式尋找客戶前必填／確認
 
 不要從其他專案搬入私人資料，也不要自行猜測。請由網站擁有者提供並確認：
 
-- [ ] 網站製作服務名稱：`service.name`
-- [ ] 我的 LINE 或 LINE 官方帳號網址：優先填入 `service.contactUrl`
-- [ ] Email：`service.email`
-- [ ] 可公開的社群帳號：`service.publicSocialUrl`
-- [ ] 客戶詢問表單：`service.inquiryFormUrl`
-- [ ] 隱私權聯絡窗口：`service.privacyContact`
-
-至少必須提供一個已驗證、可公開的網站製作聯絡入口，才能把網站用於正式尋客。若某個管道不使用，請明確確認為「不使用」，不要留著未驗證的假資料。
+- [x] 網站製作服務名稱：`免主機月租工作室網站`
+- [x] 客戶詢問表單：`service.inquiryFormUrl`
+- [x] 網站製作主要聯絡入口：`service.contactUrl`（同一份詢問表）
+- [x] 隱私權聯絡窗口：`service.privacyContact`（同一份詢問表；在需求欄填寫「個資／隱私問題」）
+- [x] Email：明確標記為「暫不使用」
+- [x] 公開社群帳號：明確標記為「暫不使用」
+- [ ] LINE 或 LINE 官方帳號：目前未提供，網站不顯示假按鈕
 
 ## 集中 SEO
 
@@ -83,7 +79,7 @@ python -m http.server 4173
 - Twitter Card
 - JSON-LD 結構化資料
 
-兩頁目前都使用 `noindex, follow`。在服務名稱、正式聯絡方式與隱私權內容確認前，不應改成 `index, follow`。HTML 內仍保留相同的靜態 SEO 預設值，避免 JavaScript 尚未執行時出現錯誤資訊。
+暖線虛構品牌首頁與本儲存庫內的舊 `service.html` 均維持 `noindex, follow`。正式服務網站 <https://gavin1424.github.io/> 已有可用詢問入口、隱私權頁與服務規則頁，因此獨立站使用 `index, follow`。HTML 內仍保留相同的靜態 SEO 預設值，避免 JavaScript 尚未執行時出現錯誤資訊。
 
 ## 圖片與素材
 
@@ -102,9 +98,8 @@ python -m http.server 4173
 
 ## 正式使用前最低檢查
 
-1. 填入並驗證網站製作聯絡入口。
-2. 確認服務名稱、Email、公開社群、表單與隱私權窗口。
-3. 若轉成真實品牌站，替換品牌、課程、作品、價格與聯絡資料。
-4. 確認圖片授權、尺寸與 alt。
-5. 在 390px、768px、1440px 重新測試導覽、CTA、對話框、SEO 與橫向溢位。
-6. 確認沒有假評價、假聯絡方式、不實承諾或本機絕對路徑。
+1. 若未來新增 LINE、Email 或公開社群，先由擁有者提供並實際驗證，再填入設定檔。
+2. 若轉成真實品牌站，替換品牌、課程、作品、價格與聯絡資料。
+3. 確認圖片授權、尺寸與 alt。
+4. 在 390px、768px、1440px 重新測試導覽、CTA、對話框、SEO 與橫向溢位。
+5. 確認沒有假評價、假聯絡方式、不實承諾或本機絕對路徑。
