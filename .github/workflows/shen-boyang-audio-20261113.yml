@@ -1,0 +1,62 @@
+name: Render public speech MP3 (temporary)
+on:
+  push:
+    branches:
+      - audio/shen-boyang-20261113
+jobs:
+  build-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Download public original speech and assemble five minutes
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python3 -m pip install --break-system-packages --quiet --upgrade yt-dlp || pip3 install --user --quiet --upgrade yt-dlp
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p sources
+          get_audio () {
+            local target="$1"
+            local url="$2"
+            echo "Trying: $url"
+            yt-dlp --no-playlist --no-progress --retries 3 --fragment-retries 3 --extract-audio --audio-format mp3 --audio-quality 2 -o "sources/${target}.%(ext)s" "$url" || true
+            if [ -s "sources/${target}.mp3" ]; then
+              local d
+              d=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "sources/${target}.mp3" || echo 0)
+              if awk "BEGIN {exit !($d > 156)}"; then return 0; fi
+            fi
+            rm -f "sources/${target}".*
+            return 1
+          }
+          get_audio clip1 'https://www.youtube.com/watch?v=X-lLWdkN-Wg' || get_audio clip1 'https://ivod.ly.gov.tw/Play/Clip/1M/161470' || true
+          get_audio clip2 'https://www.youtube.com/watch?v=xcEchYpIC6c' || get_audio clip2 'https://ivod.ly.gov.tw/Play/Clip/1M/161465' || true
+          if [ -s sources/clip1.mp3 ] && [ -s sources/clip2.mp3 ]; then
+            echo 'Using two official legislative speech recordings'
+            ffmpeg -hide_banner -loglevel error -nostdin -y -i sources/clip1.mp3 -i sources/clip2.mp3 \
+              -filter_complex '[0:a]atrim=start=5:duration=150,asetpts=PTS-STARTPTS,highpass=f=75,lowpass=f=8000[a0];[1:a]atrim=start=5:duration=150,asetpts=PTS-STARTPTS,highpass=f=75,lowpass=f=8000[a1];[a0][a1]concat=n=2:v=0:a=1,loudnorm=I=-16:TP=-1.5:LRA=11,apad,atrim=duration=300[out]' \
+              -map '[out]' -ac 1 -ar 44100 -c:a libmp3lame -b:a 192k Shen_Boyang_Speech_5_Minutes.mp3
+          else
+            echo 'Legislative sources unavailable, trying original VOA interview audio'
+            curl -fL --retry 5 --connect-timeout 20 --max-time 600 \
+              'https://voa-audio.voanews.eu/vch/2024/01/06/01000000-c0a8-0242-8df3-08dc0edf60fa_hq.mp3?download=1' \
+              -o sources/voa.mp3 || true
+            if [ ! -s sources/voa.mp3 ]; then
+              get_audio voa 'https://www.voachinese.com/a/7429316.html' || true
+            fi
+            test -s sources/voa.mp3
+            ffmpeg -hide_banner -loglevel error -nostdin -y -ss 180 -i sources/voa.mp3 \
+              -af 'highpass=f=75,lowpass=f=8000,loudnorm=I=-16:TP=-1.5:LRA=11,apad,atrim=duration=300' \
+              -t 300 -ac 1 -ar 44100 -c:a libmp3lame -b:a 192k Shen_Boyang_Speech_5_Minutes.mp3
+          fi
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 Shen_Boyang_Speech_5_Minutes.mp3
+          test $(stat -c%s Shen_Boyang_Speech_5_Minutes.mp3) -gt 1000000
+      - name: Upload single final MP3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shen_Boyang_Speech_5_Minutes
+          path: Shen_Boyang_Speech_5_Minutes.mp3
+          retention-days: 2
